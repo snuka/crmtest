@@ -9,6 +9,7 @@ interface Customer {
   phone?: string;
   company?: string;
   status: 'active' | 'inactive' | 'lead';
+  document_url?: string;
 }
 
 const Customers: React.FC = () => {
@@ -136,6 +137,7 @@ const Customers: React.FC = () => {
                 <th>Email</th>
                 <th>Company</th>
                 <th>Status</th>
+                <th>Document</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -149,6 +151,15 @@ const Customers: React.FC = () => {
                     <span className={`badge ${getStatusBadgeClass(customer.status)}`}>
                       {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
                     </span>
+                  </td>
+                  <td>
+                    {customer.document_url ? (
+                      <a href={customer.document_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-info">
+                        <i className="bi bi-file-earmark"></i> View
+                      </a>
+                    ) : (
+                      <span className="text-muted">No document</span>
+                    )}
                   </td>
                   <td>
                     <div className="btn-group btn-group-sm">

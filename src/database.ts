@@ -14,6 +14,18 @@ if (!supabaseUrl || !supabaseKey) {
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Create an admin client with service_role key (if available)
+// This bypasses RLS policies - USE ONLY FOR TESTING, NOT IN PRODUCTION!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+export const supabaseAdmin = supabaseServiceKey ? 
+  createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }) : 
+  null;
+
 // Test the connection
 export const testConnection = async () => {
   try {

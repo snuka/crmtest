@@ -88,9 +88,51 @@ export const customersAPI = {
     return response.data;
   },
 
+  // Create customer with document
+  createWithDocument: async (customerData: any, documentFile: File) => {
+    const formData = new FormData();
+    
+    // Add customer data
+    Object.keys(customerData).forEach(key => {
+      formData.append(key, customerData[key]);
+    });
+    
+    // Add document file
+    formData.append('document', documentFile);
+    
+    const response = await api.post('/customers', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  },
+
   // Update customer
   update: async (id: string, customerData: any) => {
     const response = await api.put(`/customers/${id}`, customerData);
+    return response.data;
+  },
+
+  // Update customer with document
+  updateWithDocument: async (id: string, customerData: any, documentFile: File) => {
+    const formData = new FormData();
+    
+    // Add customer data
+    Object.keys(customerData).forEach(key => {
+      formData.append(key, customerData[key]);
+    });
+    
+    // Add document file
+    formData.append('document', documentFile);
+    
+    const response = await api.put(`/customers/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
     return response.data;
   },
 

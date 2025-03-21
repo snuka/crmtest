@@ -16,6 +16,8 @@ export const registerUser = async (
   role: 'admin' | 'manager' | 'sales_rep'
 ): Promise<{ user: User | null; error: any }> => {
   try {
+    console.log('Registering new user with email:', email);
+    
     // Hash the password
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     
@@ -26,35 +28,61 @@ export const registerUser = async (
       .eq('email', email)
       .single();
     
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking for existing user:', checkError);
+      return { user: null, error: { message: 'Error checking if user exists', details: checkError } };
+    }
+    
     if (existingUser) {
+      console.warn('User already exists with email:', email);
       return { user: null, error: { message: 'User with this email already exists' } };
     }
+    
+    // Prepare user data
+    const userData = {
+      email,
+      password_hash: passwordHash,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    
+    console.log('Inserting new user with data:', { ...userData, password_hash: '[HIDDEN]' });
     
     // Insert the new user
     const { data, error } = await supabase
       .from('users')
-      .insert({
-        email,
-        password_hash: passwordHash,
-        first_name: firstName,
-        last_name: lastName,
-        role,
-        created_at: new Date(),
-        updated_at: new Date()
-      })
+      .insert(userData)
       .select()
       .single();
     
     if (error) {
-      return { user: null, error };
+      console.error('Error inserting new user:', error);
+      
+      // Get more details about the error
+      let errorDetails = error.message;
+      if (error.code === '42501') {
+        errorDetails = 'Permission denied. The application does not have INSERT privileges on the users table.';
+      } else if (error.code === '23505') {
+        errorDetails = 'A user with this email already exists.';
+      } else if (error.message && error.message.includes('violates row-level security policy')) {
+        errorDetails = 'Row-level security policy prevents user creation. Please contact your administrator.';
+      }
+      
+      return { user: null, error: { message: 'Failed to create user', details: errorDetails } };
     }
+    
+    console.log('User registered successfully with ID:', data.id);
     
     // Strip password hash before returning user object
     const { password_hash, ...userWithoutPassword } = data;
     
     return { user: userWithoutPassword as User, error: null };
   } catch (error) {
-    return { user: null, error };
+    console.error('Unexpected error during user registration:', error);
+    return { user: null, error: { message: 'Registration failed due to an unexpected error', details: error } };
   }
 };
 

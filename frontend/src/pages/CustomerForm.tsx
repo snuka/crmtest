@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { customersAPI } from '../services/api';
 
@@ -10,10 +10,22 @@ interface CustomerFormData {
   status: 'active' | 'inactive' | 'lead';
 }
 
+interface CustomerResponse {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  status: 'active' | 'inactive' | 'lead';
+  document_url?: string;
+  created_at: string;
+}
+
 const CustomerForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEditMode = !!id;
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
@@ -23,6 +35,8 @@ const CustomerForm: React.FC = () => {
     status: 'active',
   });
   
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [existingDocument, setExistingDocument] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -42,6 +56,10 @@ const CustomerForm: React.FC = () => {
               company: customer.company || '',
               status: customer.status,
             });
+            
+            if (customer.document_url) {
+              setExistingDocument(customer.document_url);
+            }
           }
         } catch (err: any) {
           setError(err.response?.data?.error || 'Failed to load customer');
@@ -62,6 +80,12 @@ const CustomerForm: React.FC = () => {
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setDocumentFile(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -70,9 +94,17 @@ const CustomerForm: React.FC = () => {
       setError('');
       
       if (isEditMode) {
-        await customersAPI.update(id!, formData);
+        if (documentFile) {
+          await customersAPI.updateWithDocument(id!, formData, documentFile);
+        } else {
+          await customersAPI.update(id!, formData);
+        }
       } else {
-        await customersAPI.create(formData);
+        if (documentFile) {
+          await customersAPI.createWithDocument(formData, documentFile);
+        } else {
+          await customersAPI.create(formData);
+        }
       }
       
       navigate('/customers');
@@ -184,6 +216,59 @@ const CustomerForm: React.FC = () => {
                     <option value="inactive">Inactive</option>
                     <option value="lead">Lead</option>
                   </select>
+                </div>
+                
+                <div className="mb-3">
+                  <label htmlFor="document" className="form-label">
+                    Document
+                  </label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="document"
+                    name="document"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                  />
+                  <div className="form-text">
+                    Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, CSV
+                  </div>
+                  
+                  {existingDocument && !documentFile && (
+                    <div className="mt-2">
+                      <p className="mb-1">Current document:</p>
+                      <div className="d-flex align-items-center">
+                        <a href={existingDocument} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
+                          View Document
+                        </a>
+                        <span className="text-muted small">
+                          (Select a new file to replace the current document)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {documentFile && (
+                    <div className="mt-2">
+                      <p className="mb-1">Selected file:</p>
+                      <div className="d-flex align-items-center">
+                        <span className="me-2">{documentFile.name}</span>
+                        <button 
+                          type="button" 
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => {
+                            setDocumentFile(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = '';
+                            }
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="d-flex justify-content-end gap-2">

@@ -6,6 +6,7 @@ import customerRoutes from './routes/customerRoutes';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { initializeAdminUser } from './services/adminService';
+import { initializeStorage } from './services/storageService';
 import path from 'path';
 
 // Load environment variables
@@ -85,6 +86,18 @@ app.listen(PORT, async () => {
   // Test database connection on startup
   const connectionResult = await testConnection();
   console.log('Database connection test:', connectionResult);
+  
+  // Initialize storage bucket
+  try {
+    const { success, error } = await initializeStorage();
+    if (success) {
+      console.log('Storage bucket initialized successfully');
+    } else {
+      console.error('Error initializing storage bucket:', error);
+    }
+  } catch (err) {
+    console.error('Failed to initialize storage bucket:', err);
+  }
   
   // Initialize admin user if no users exist
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
